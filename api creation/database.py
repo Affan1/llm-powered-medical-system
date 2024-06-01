@@ -1,8 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-URL_DATABASE = 'mysql+mysqlconnector://root:Venusaur-1@localhost/llm_doctor_assistant_database'
+URL_DATABASE = os.getenv('URL_DATABASE')
 
 engine = create_engine(URL_DATABASE)
 

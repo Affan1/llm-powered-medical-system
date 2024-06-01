@@ -1,13 +1,44 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from passlib.context import CryptContext
 from database import SessionLocal, engine
 import models, schemas
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    "localhost:3000"
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+
+@app.get("/", tags=["root"])
+async def read_root() -> dict:
+    return {"message": "Welcome to your fastAPI."}
+
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
 
 # Dependency to get the database session
 def get_db():
@@ -17,12 +48,23 @@ def get_db():
     finally:
         db.close()
 
+@app.post("/login/")
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.Email == user.Email).first()
+    if not db_user or not verify_password(user.Password, db_user.PasswordHash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {"message": "Login successful", "user": db_user.Username, "role": db_user.Role}
+
 # Create a new user
 @app.post("/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = models.User(
         Username=user.Username, 
-        PasswordHash=user.Password, 
+        PasswordHash=get_password_hash(user.Password), 
         Email=user.Email, 
         Role=user.Role
     )

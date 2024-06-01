@@ -16,6 +16,10 @@ class User(UserBase):
     CreatedAt: datetime
     UpdatedAt: datetime
 
+class UserLogin(BaseModel):
+    Email: str
+    Password: str
+    
     class Config:
         orm_mode = True
 

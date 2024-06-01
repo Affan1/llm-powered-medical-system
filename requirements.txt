@@ -5,3 +5,6 @@ transformers
 torch
 sqlalchemy
 pymysql
+bcrypt
+passlib
+python-dotenv
